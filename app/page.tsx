@@ -1,6 +1,5 @@
 'use client'
 import Lists from "@/components/lists";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 

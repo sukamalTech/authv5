@@ -5,7 +5,7 @@ import React from 'react'
 export default function LoginWithGithub() {
     return (
         <button className='w-full h-10 bg-black text-white '
-            onClick={() => login("github")}>
+            onClick={async () => await login("github")}>
             Login with Github
         </button>
     )

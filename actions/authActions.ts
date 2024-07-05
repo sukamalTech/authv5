@@ -1,11 +1,13 @@
 "use server";
 import { signIn, signOut } from "@/auth";
-import { SignupInputs } from "@/components/SignupForm";
 import { db } from "@/db";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { loginSchema, registerSchema } from "@/utlis/schema/authSchema";
-import { LoginInputs } from "@/components/LoginForm";
+import * as z from "zod";
+import { getUserByEmail } from "@/utlis/helper/user";
+import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
+import { error } from "console";
 
 export const login = async (provider: string) => {
   await signIn(provider, { redirectTo: "/" });
@@ -17,20 +19,9 @@ export const logout = async () => {
   revalidatePath("/");
 };
 
-export const getUserByEmail = async (email: string) => {
-  try {
-    const user = await db.user.findUnique({
-      where: {
-        email: email,
-      },
-    });
-    return user;
-  } catch (error) {
-    return null;
-  }
-};
-
-export const signupWithCredentials = async (data: SignupInputs) => {
+export const signupWithCredentials = async (
+  data: z.infer<typeof registerSchema>
+) => {
   try {
     const valid = await registerSchema.safeParseAsync(data);
     if (!valid.success) {
@@ -38,15 +29,15 @@ export const signupWithCredentials = async (data: SignupInputs) => {
         error: valid.error.message,
       };
     }
-    const { email, password, name } = data;
+    const { email, password, name } = valid.data;
     const user = await getUserByEmail(email);
     if (user) {
       return {
         error: "Email already exists",
       };
     }
-    const salt = await bcrypt.genSaltSync(10);
-    const hashedPassword = await bcrypt.hashSync(password, salt);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
     await db.user.create({
       data: {
         email,
@@ -62,24 +53,24 @@ export const signupWithCredentials = async (data: SignupInputs) => {
   }
 };
 
-export const signinWithCredentials = async (data: LoginInputs) => {
-  try {
-    const valid = await loginSchema.safeParseAsync(data);
-    if (!valid.success) {
-      return {
-        error: valid.error.message,
-      };
-    }
-    const { email, password } = data;
+export const signinWithCredentials = async (
+  data: z.infer<typeof loginSchema>
+) => {
+  const valid = await loginSchema.safeParseAsync(data);
+  if (!valid.success) {
+    return {
+      error: "Invalid credentials",
+    };
+  }
 
+  const { email, password } = valid.data;
+  try {
     await signIn("credentials", {
       email: email,
       password: password,
-      callbackUrl: "/",
+      redirectTo: DEFAULT_LOGIN_REDIRECT,
     });
-    revalidatePath("/");
-    return { message: "Successfully logged in", status: 200 };
   } catch (error) {
-    return { error: error, message: "Something went wrong" };
+    throw error; // If not throw error then redirect not happened
   }
 };

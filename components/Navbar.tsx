@@ -5,7 +5,6 @@ import { auth } from '@/auth'
 
 export default async function Navbar() {
     const session = await auth()
-    console.log(session)
 
     return (
         <nav className='max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16 border-b border-gray-200'>

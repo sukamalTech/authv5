@@ -8,6 +8,7 @@ export default async function NextAuthProviderWrapper({
     children: React.ReactNode;
 }>) {
     const session = await auth()
+    // if (!session?.user) return null
     return (
         <SessionProvider session={session}>
             {children}

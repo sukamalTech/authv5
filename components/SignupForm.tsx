@@ -7,18 +7,15 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import AuthBtn from './AuthBtn';
 import { registerSchema } from '@/utlis/schema/authSchema';
 import { signupWithCredentials } from '@/actions/authActions';
-export interface SignupInputs {
-    name: string
-    email: string;
-    password: string;
-}
+import { useRouter } from "next/navigation";
 export default function SignupForm() {
+    const router = useRouter();
     const { register, handleSubmit, reset, formState: { errors }, } = useForm<z.infer<typeof registerSchema>>({
         resolver: zodResolver(registerSchema),
         defaultValues: {}
 
     })
-    const onSubmit: SubmitHandler<SignupInputs> = async (data) => {
+    const onSubmit: SubmitHandler<z.infer<typeof registerSchema>> = async (data) => {
         const res = await signupWithCredentials(data);
 
         if (res.error) {
@@ -27,6 +24,7 @@ export default function SignupForm() {
         } else {
             // @ts-ignore
             toast.success(res?.message);
+            router.push("/signin")
             reset()
         }
     }
