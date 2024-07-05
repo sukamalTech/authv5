@@ -17,4 +17,4 @@ export const authRoutes = ["/login", "/signup", "/error"];
  */
 export const apiAuthPrefix = "/api/auth";
 
-export const DEFAULT_LOGIN_REDIRECT = "/middleware";
+export const DEFAULT_LOGIN_REDIRECT = "/settings";
