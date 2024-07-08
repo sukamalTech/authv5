@@ -3,7 +3,7 @@
  * This routes which are not protected by Auth
  * @type {string[]}
  */
-export const publicRoutes = ["/"];
+export const publicRoutes = ["/", "/auth/new-verification"];
 /**
  * Accepts all Auth routes
  * This routes are used to login or register users and are

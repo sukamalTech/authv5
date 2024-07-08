@@ -1,12 +1,9 @@
 import NextAuth from "next-auth";
-import Github from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import Credentials from "next-auth/providers/credentials";
-import { revalidatePath } from "next/cache";
-import bcrypt from "bcryptjs";
 import { db } from "./db";
-import { getUserByEmail } from "./utlis/helper/user";
+import { getUserByEmail, getUserById } from "./utlis/helper/user";
 import authConfig from "@/auth.config";
+import { Role } from "@prisma/client";
 export const {
   handlers: { GET, POST },
   signIn,
@@ -18,21 +15,44 @@ export const {
   pages: {
     signIn: "/login",
   },
+  events: {
+    // @ts-ignore
+    async linkAccount({ user, account }) {
+      if (account?.provider !== "credentials") {
+        await db.user.update({
+          where: {
+            id: user.id,
+          },
+          data: {
+            emailVerified: new Date(),
+          },
+        });
+      }
+      return true;
+    },
+  },
   callbacks: {
-    // async signIn({ user, account }) {
-    //   if (account?.provider !== "credentials") return true;
-    //   return true;
-    // },
-    // async session({ token, user, session }) {
-    //   return session;
-    // },
-    // async jwt({ token }) {
-    //   if (!token.email) return token;
-    //   const existingUser = await getUserByEmail(token.email);
-    //   if (!existingUser) return token;
-    //   token.role = existingUser.role;
-    //   return token;
-    // },
+    async signIn({ user, account }) {
+      if (account?.provider !== "credentials") return true;
+      const existingUser = await getUserById(user.id);
+      if (existingUser?.emailVerified === null) return false;
+      return true;
+    },
+    async session({ token, user, session }) {
+      if (token.role && token.sub && session.user) {
+        session.user.role = token.role as Role;
+        session.user.id = token.sub;
+      }
+
+      return session;
+    },
+    async jwt({ token }) {
+      if (!token.sub) return token;
+      const existingUser = await getUserById(token.sub);
+      if (!existingUser) return token;
+      token.role = existingUser.role;
+      return token;
+    },
   },
   ...authConfig,
 });

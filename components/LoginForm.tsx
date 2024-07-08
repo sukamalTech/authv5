@@ -29,11 +29,8 @@ export default function LoginForm() {
         setSuccessMsg(null)
         startTransition(() => {
             signinWithCredentials(data).then((res) => {
-                console.log(res)
-                // @ts-ignore
-
-                // setErrorMsg(res.error)
-                // setSuccessMsg(res.message);
+                setErrorMsg(res?.error)
+                setSuccessMsg(res?.message);
             })
         })
     }

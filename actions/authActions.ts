@@ -8,6 +8,10 @@ import * as z from "zod";
 import { getUserByEmail } from "@/utlis/helper/user";
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
 import { error } from "console";
+import { AuthError } from "next-auth";
+import { generateVerificationToken } from "@/utlis/helper/token";
+import { get } from "http";
+import { sendVerificationEmail } from "@/utlis/resend-mail";
 
 export const login = async (provider: string) => {
   await signIn(provider, { redirectTo: "/" });
@@ -47,7 +51,14 @@ export const signupWithCredentials = async (
       },
     });
     revalidatePath("/");
-    return { message: "Successfully registered" };
+    const verificationToken = await generateVerificationToken(email);
+    if (verificationToken) {
+      await sendVerificationEmail(
+        verificationToken.email,
+        verificationToken.token
+      );
+    }
+    return { message: "Verification token sent to your email" };
   } catch (error) {
     return { error: error, message: "Something went wrong" };
   }
@@ -64,6 +75,17 @@ export const signinWithCredentials = async (
   }
 
   const { email, password } = valid.data;
+  const user = await getUserByEmail(email);
+  if (user?.emailVerified === null) {
+    const verificationToken = await generateVerificationToken(email);
+    if (verificationToken) {
+      await sendVerificationEmail(
+        verificationToken.email,
+        verificationToken.token
+      );
+    }
+    return { message: "Verification token sent to your email" };
+  }
   try {
     await signIn("credentials", {
       email: email,
@@ -71,6 +93,18 @@ export const signinWithCredentials = async (
       redirectTo: DEFAULT_LOGIN_REDIRECT,
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return {
+            error: "Invalid credentials",
+          };
+        default:
+          return {
+            error: "Something went wrong",
+          };
+      }
+    }
     throw error; // If not throw error then redirect not happened
   }
 };
